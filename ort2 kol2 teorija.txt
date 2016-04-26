@@ -1,0 +1,178 @@
+Memorija je 2 na 16 bajtova, gledam kolika je rec, 1W = 1B => mem 2 na 16 RECI!!!
+Rec je velicina(sirina) memorijske lokacije, to je najmanja jedinica koja moze da se procita ili upise u memoriju.
+
+Iz gornje velicine memorije, zakljucujem da je adresa 16 bit (2B). Adresa je jedinstveni broj svake lokacije u memoriji.
+
+Jednoadresni => acc, load, store...
+
+Podaci (operandi instrukcija) su duzine 2B (nije isto sto i adresa, ne mora da bude iste duzine). Stariji (levi bajt) ide na lokaciju sa manjom adresom, mladji (desni) ide na lokaciju sa vecom adresom.
+
+	---------
+21 | mladji  |       mladji je isto sto i low
+	---------
+20 | stariji |       stariji je isto sto i high
+	---------
+adr	
+
+Registri procesora:
+
+PC (program counter) - sadrzi ADRESU sledece instrukcije koja treba da se izvrsi
+
+MAR (memory address register) - preko njega CPU komunicira sa mem (salje adresu)
+MBR (memory buffer register) - preko njega CPU komunicira sa mem (salje ili prima podatak)
+
+IR (instruction register) - kompletna instrukcija se iz memorije dovlaci u ovaj registar
+
+A - akumulator, B - pomocni akumulator (prihvata operand)
+
+R0-R31 (GPR - general purpose register) - "mini" memorija u okviru CPU, za razne namene
+
+PSW (program status word) - sadrzi razne (1-bitne)indikatore statusa programa (pored ostalog sadrzi i N(negative), Z(zero), V(overflow/prekoracenje), C(carry/pozajmica) indikatore)
+
+SP (stack pointer) - sadrzi ADRESU vrha steka
+Stek moze da postoji u 4 varijante:
+1. raste ka visim lokacijama ("na gore"), SP pokazuje na prvu slobodnu lokaciju
+2. raste ka visim lokacijama ("na gore"), SP pokazuje na poslednju zauzetu
+3. raste ka nizim lokacijama ("na dole"), SP pokazuje na prvu slobodnu lokaciju
+4. raste ka nizim lokacijama ("na dole"), SP pokazuje na poslednju zauzetu
+
+1. 	---------
+21 |         | <-SP
+	---------
+20 | xxxxxxx |
+	---------
+19 | xxxxxxx |
+	---------
+	   dno
+	   
+2. 	---------
+21 |         | 
+	---------
+20 | xxxxxxx | <-SP
+	---------
+19 | xxxxxxx |
+	---------
+	   dno	   
+
+	   dno
+3. 	---------
+21 | xxxxxxx | 
+	---------
+20 | xxxxxxx | 
+	---------
+19 |         | <-SP
+	---------
+	   	   
+	   dno
+3. 	---------
+21 | xxxxxxx | 
+	---------
+20 | xxxxxxx | <-SP
+	---------
+19 |         | 
+	---------
+	   
+Format instrukcije (kako izgleda instrukcija):
+
+U ovom zadatku IR ima najvise 4B.
+
+IR  31    IR I   24 . 23    IR II  16 . 15   IR III  8 . 7    IR IV  0
+
+Postoje 3 vrste instrukcija:
+
+1. skokovi (uslovni ili bezuslovni) - skok je upis adrese skoka u PC!!!
+  * BZ (branch if zero) - uslovni skok, skace kada je bit Z u PSW jednak 1 (true)
+	postoji 8 varijanti skokova, za sva 4 bita iz PSW po 2 varijante
+	npr: BZ, BNZ (branch if NOT zero), BC, BNC, BN, BNN, BV, BNV
+	
+	Ovde je instrukcija BZ relativni skok, tj. adresa skoka se odredju uz pomoc vrednosti PC i 8-bit pomeraja koji se dobije u instrukciji. Adresa skok je onda PC + pomeraj, ako je uslov ispunjen, to se upise u PC.
+	
+	Sledeca 2 skoka su dati kao apsolutni skokovi, sto znaci da je zadata ADRESA na koju se skace, ne treba nista da se racuna.
+  * JMP (jump) - bezuslovni skok, uvek skace na adresu skoka zadatu u instrukciji.
+
+  * JSR (jump to subroutine) - bezuslovni skok u potprogram, prvo stavi PC na vrh steka, pa tek onda skoci na adresu skoka zadatu u instrukciji.
+
+2. bezadresne (ne zahtevaju operand, npr. RTS, PUSH, POP)
+
+  * PUSH - stavlja acc na vrh steka
+  * POP - skida sa vrha steka podatak u acc
+  * RTS - skida sa vrha steka PC (adresu povratka iz potprograma)
+  * RTI - skida sa vrha steka PSW i PC (redosled zavisi od postavke zadatka, kaze ti da se prilikom ulaska u prekid stavljaju PC i PSW, pa se skida obrnuto)
+
+3. adresne (zahtevaju operand, npr. LOAD sta?   STORE gde?   ADD sta?)
+
+  * LD (load) - ucitava OPERAND u acc
+  * ST (store) - smesta acc na zadatu POZICIJU ("OPERAND")
+  * ADD - sabira OPERAND sa acc i smesta u acc (moze da se pojavi i SUB, INC, DEC)
+  * AND - radi logicko "i" OPERANDA sa acc i smesta u acc (moze da se pojavi i OR, NOT, XOR)
+  * ASR (arithmetical shift right) - pomera OPERAND aritmeticki(!) za jedno mesto udesno i smesta u acc (moze da se pojavi i LSR, LSL(isto sto i ASL), ROR, ROL)
+	Kod aritmetickog pomeranja udesno, sa leve strane, na upraznjeno mesto se uvek ubacuje ZNAK (najvisi bit), a kod logickog se uvek ubacuje NULA. Kod pomeranja ulevo UVEK idu NULE!! Kod rotacije (ROR, ROL) ubacuje se ono sto se odseca sa suprotne strane.
+  * JADR (jump to address) - "adresni" skok, skace na zadatu POZICIJU ("OPERAND")
+
+Detaljni formati instrukcija su dati u resenju zadatka, tabela 1.a.
+
+Adresne instrukcije zahtevaju operand (poziciju), a taj operand moze da se zada na vise nacina (npr. nalazi se u tom i tom registru, na toj adresi u memoriji itd.). Nacin zadavanja operanda se naziva NACIN ADRESIRANJA.
+
+Nacini adresiranja:
+
+"UI" je skraceno "U instrukciji je zadat..."
+
+1.registarsko direktno (regdir) - UI broj registra u kojem je operand
+LOAD R6   idi u R6 i uzmi operand
+
+2.registarsko indirektno (regind) - UI broj registra u kojem je ADRESA operanda u memoriji
+LOAD (R6)   idi u R6 i uzmi adresu, idi u memoriju na tu adresu i uzmi operand
+
+3.registarsko indirektno sa postdekrementom (postdecr) - UI broj registra u kojem je adresa operanda, sadrzaj tog registra se nakon upotrebe dekrementira (1x ili 2x, zavisi koliko reci zauzima PODATAK).
+LOAD (R6)-
+
+4.registarsko indirektno sa preinkrementom (preincr) - UI broj registra u kojem je adresa operanda, sadrzaj tog registra se pre upotrebe inkrementira (1x ili 2x, zavisi koliko reci zauzima PODATAK).
+LOAD +(R6)
+
+5.registarsko indirektno sa pomerajem (regindpom) - UI broj registra u kojem je adresa operanda i pomeraj, saberes adresu sa pomerajem i ocitas operand iz memorije
+LOAD (R6)7h    uzmi adresu iz R6, saberi sa 7h, idi u memoriju i uzmi operand
+
+6.memorijsko direktno (memdir) - UI adresa operanda
+LOAD 0100h   citaj operand iz memorije sa adrese 0100h
+
+7.memorijsko indirektno (memind) - UI adresa ADRESE operanda (pokazivac)
+LOAD (0100h)   idi u memoriju na adresu 0100h, uzmi odatle ADRESU operanda, idi na tu ADRESU i citaj operand iz memorije
+
+8.neposredno (immed) - UI operand
+LOAD #50h    upisi broj 50h (operand) u acc
+
+9.pc relativno (pcrel) - UI pomeraj koji se doda na PC i dobije se adresa operanda (kao adresiranje 5. samo sa PC)
+LOAD (PC)6h   uzmi adresu iz PC, saberi sa 6h, idi u memoriju i uzmi operand
+
+10.bazno adresiranje sa pomerajem - UI pomeraj koji se doda na BR (bazni registar) i dobije se adresa operanda (kao adresiranje 5. samo sa BR)
+LOAD (BR)6h   uzmi adresu iz BR, saberi sa 6h, idi u memoriju i uzmi operand
+
+11.indeksno adresiranje sa pomerajem - UI pomeraj koji se doda na XR (indeksni registar) i dobije se adresa operanda (kao adresiranje 5. samo sa XR)
+LOAD (XR)6h   uzmi adresu iz XR, saberi sa 6h, idi u memoriju i uzmi operand
+
+12.bazno indeksno adresiranje sa pomerajem - UI pomeraj koji se doda na BR+XR i dobije se adresa operanda (kao adresiranje 5. samo sa BR i XR)
+LOAD (BR, XR)6h   uzmi adresu iz BR, saberi sa adresom iz XR, saberi sa 6h, idi u memoriju i uzmi operand
+
+Detaljni formati nacina adresiranja su dati u resenju zadatka, tekst i tabela 1.g.
+
+Deo sa prekidima za sad zanemari, uvec se slicno radi.
+
+
+Faze dijagrama:
+I faza (citanje instrukcije): 
+Cilj je da se u registar IR dovuce KOMPLETNA instrukcija iz memorije. Adresne instrukcije nastavljaju u II fazu, a skokovi i bezadresne idu direktno u III fazu.
+
+II faza (formiranje adrese i citanje operanda):
+Ova faza je podeljena na IIa (formiranje adrese) i IIb (citanje operanda) fazu.
+Cilj IIa faze je da se u MAR smesti adresa operanda u memoriju (ako nacin adresiranje koristi memoriju) ili da se u pomocni acc B smesti vec spreman operand (ako je neposredno ili registarsko direktno - ne koriste memoriju).
+Cilj IIb faze je da se operand procita iz memoriju sa adrese koja je u MAR i dovuce u pomocni acc B. STORE preskace ovu fazu jer on NE CITA vec PISE operand na zadatu adresu/poziciju, a JADR preskace ovu fazu jer on NE CITA vec SKACE na zadatu adresu/poziciju.
+
+III faza (izvrsenje instrukcije):
+Cilj III faze je da se izvrsi instrukcija.
+Kod STORE ne radi se ako je neposredno adresiranje, a ako nije, razlikuju se regdir i ostala adresiranja. Kod regdir acc se smesta u registar, a kod ostalih u memoriju.
+Kod PUSH, POP, JSR, RTS, RTI treba obratiti paznju na koju stranu raste stek i gde pokazuje SP.
+Kod skokova se adresa skoka izracuna (ako je potrebno), a zatim se upise u PC. JADR ne radi ako je neposredno ili registarko direktno adresiranje.
+JSR je isto sto i PUSH, samo na stek ide PC umesto acc. RTI i RTS su isti kao POP, samo RTI skida sa steka PSW, pa PC, a RTS skida PC (umesto acc).
+
+IV faza (opsluzivanje prekida):
+Cilj IV faze je da se proveri da li je bilo prekida, i ukoliko jeste skace se na prekidnu rutinu, a ukoliko nije vraca se na I fazu. Radi se (redom): stavljanje PC, pa PSW na stek, zatim ide deo odredjivanja adrese prekidne rutine, i skok na nju upisom adrese u PC.
